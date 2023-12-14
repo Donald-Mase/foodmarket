@@ -1,22 +1,13 @@
 # -*- coding: utf-8 -*-
-import folium as folium
 from dash import Dash, dcc, html, dash_table, Input, Output, State, callback_context
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import pandas as pd
 import plotly.express as px
-import statsmodels.api as sm
-import openpyxl
-#from matplotlib import pyplot as plt
-import numpy as np
-import dash
-import datetime
-from datetime import date,timedelta
-import os
-import seaborn as sns
-from plotly.subplots import make_subplots
+from matplotlib import pyplot as plt
 import folium
 from folium import plugins
+import openpyxl
 
 # Source our data using the actual link to your CSV file
 csv_link = 'https://raw.githubusercontent.com/Donald-Mutai/Files/main/wfp_food_prices_ken.csv'
@@ -27,13 +18,13 @@ data = pd.read_csv(csv_link)
 
 # csv data to dataframe
 df = pd.DataFrame(df)
-#data = pd.DataFrame(df)
+# data = pd.DataFrame(df)
 
-#adjust for invalid and missing values
+# adjust for invalid and missing values
 df = df.dropna()
 df.isnull().sum()
 
-#eliminate the second row to standardize dataframe format
+# eliminate the second row to standardize dataframe format
 df = df.drop(0)
 
 """
@@ -41,11 +32,12 @@ df = df.drop(0)
 Map Visual
 """
 
-mymap = folium.Map([-1.287905,36.792712], id="folium-map",  zoom_start =50, width ="%100", height="%100")
-locations = list(zip(df.latitude,df.longitude))
+mymap = folium.Map([-1.287905, 36.792712], id="folium-map", tiles="cartodbpositron", zoom_start=8, width="%100",
+                   height="%100")
+locations = list(zip(df.latitude, df.longitude))
 
 # Create a MarkerCluster object
-marker_cluster = plugins.MarkerCluster(popups = df['market'].tolist()).add_to(mymap)
+marker_cluster = plugins.MarkerCluster(popups=df['market'].tolist()).add_to(mymap)
 
 # Add individual markers to the MarkerCluster using a loop
 for location in locations:
@@ -60,13 +52,16 @@ app = Dash(
     __name__,
     external_stylesheets=[dbc.themes.SPACELAB, dbc.icons.FONT_AWESOME],
 )
-server = app.server
-df = pd.read_excel('wfp.xlsx', engine='openpyxl')
-#df["date"] = pd.to_datetime(df["date"])
+df = pd.read_excel('wfp.xlsx', engine='openpyxl', parse_dates=["date"], index_col="date")
+# df["date"] = pd.to_datetime(df["date"])
 data = pd.read_excel('wfp.xlsx', engine='openpyxl')
+datax = pd.read_excel('wfp.xlsx', engine='openpyxl')
+
 data = pd.DataFrame(data)
 data = data.drop([0])
 
+datax = pd.DataFrame(datax)
+datax = datax.drop([0])
 
 series = df['admin1'].value_counts()
 series2 = df['admin2'].value_counts()
@@ -88,53 +83,55 @@ df_result2.columns = ['admin2', 'Total']
 df_result3.columns = ['market', 'Total']
 df_result4.columns = ['commodity', 'Total']
 
-#Pie Chart
+
+selected= ['date','commodity','category','market','unit','pricetype','price']
+selected_df = data[selected]
+dash_table = dash_table.DataTable(df.to_dict('records'),[{"name": i,"id":i} for i in selected_df.tail(15).columns], page_size= 15)
+
+# Pie Chart
 
 fig1 = px.pie(df_result,
-             values='Total',
-             names='admin1',
-             labels='admin1',
-             title='Pie Chart for Market Data Proportions Based on Adminstrative Region1 ')
+              values='Total',
+              names='admin1',
+              labels='admin1',
+              title='Pie Chart for Market Proportions Based on Adminstrative Region1 ')
 
-fig12 = go.Figure(data=[go.Bar(x=df_result4['commodity'], y=df_result4['Total'], text=df_result4['commodity'], orientation='v')])
+fig12 = go.Figure(
+    data=[go.Bar(x=df_result4['commodity'], y=df_result4['Total'], text=df_result4['commodity'], orientation='v')])
 
-#Donut Chart
+# Donut Chart
 # Create a figure with a donut chart
 fig2 = go.Figure(data=[go.Pie(values=df_result2['Total'], labels=df_result2['admin2'], hole=0.5)])
 
 # Add a title and labels
 fig2.update_layout(title='Administrative Region 2 Data Proportions ', xaxis_title='x', yaxis_title='y', height=600)
 
-
 # Create a figure with a bar chart
-fig3 = go.Figure(data=[go.Bar(x=df_result3['market'], y=df_result3['Total'], text=df_result3['market'], orientation='v')])
+fig3 = go.Figure(
+    data=[go.Bar(x=df_result3['market'], y=df_result3['Total'], text=df_result3['market'], orientation='v')])
 
 # Add a title and labels
 fig3.update_layout(title='Bar Chart on Major Market Proportions Data', xaxis_title='', yaxis_title='Total', height=800)
 
-
-
-
 data['date'] = pd.to_datetime(data['date'])
+datax['date'] = pd.to_datetime(datax['date'])
 
 data = data.query("unit == 'KG'")
-#maize
+# maize
 data = data.query("commodity == 'Maize'")
 
-#-forecast
+# -forecast
 data = data.query("priceflag == 'actual'")
 
+# Linechart
 
-
-#Linechart
-
-fig = px.line(data, x="date", y="price", color="market", hover_name="market", title= "Maize Price Series", height=800)
+fig = px.line(data, x="date", y="price", color="market", hover_name="market", title="Maize Price Series", height=300)
 
 data = data.query("market == 'Nairobi'")
 
-fig14 = px.area(data, x="date", y="price", color="market", hover_name="market", title= "Nairobi Maize Price Series")
-fig15 = px.scatter(data, x="date", y="price", color="market", hover_name="market", title= "Nairobi Maize Price Series", trendline="ols", trendline_scope="overall")
-
+fig14 = px.area(data, x="date", y="price", color="market", hover_name="market", title="Nairobi Maize Price Series")
+fig15 = px.scatter(data, x="date", y="price", color="market", hover_name="market", title="Nairobi Maize Price Series",
+                   trendline="ols", trendline_scope="overall")
 
 """
 ==========================================================================
@@ -155,15 +152,15 @@ Introduction_text = dcc.Markdown(
     """
     The dashboard provides an overview of price trends across multiple regions in Kenya, enabling us to analyze price movements over time and identify contrasts in price changes across various markets.
     By examining the data, we can gain valuable insights into the performance of different commodities and make informed decisions based on the latest market trends.
-    
+
     Objectives
-    
-    ⦁	 Get a visual analysis of regional market sizes.
-    
-    ⦁	Study the trends in prices for commodities across time.
-    
-    ⦁	Attempt a forecast on the changes in market prices.
-    
+
+    ⦁	 Get a visual on the distribution of commodities in different areas.
+
+    ⦁	Interact with the trends in prices for commodities across different markets.
+
+    ⦁	Study the changes in market prices.
+
     ⦁	Understand the dynamics of price movements relative to time.  
 
     """
@@ -184,8 +181,6 @@ Visual_Report_text_b = dcc.Markdown(
     Nairobi is followed closely by Turkana, Garissa, and Mombasa with notable data output.
     """
 )
-
-
 
 Timeseries_text = dcc.Markdown(
     """
@@ -228,15 +223,6 @@ forecast_text = dcc.Markdown(
     """
 )
 
-Summary_text = dcc.Markdown(
-    """
-    To summarize the project, we have successfully extracted valuable insights from our data, providing a visual representation of the distribution of commodities across two administrative regions and markets. 
-    Our timeseries data has enabled us to analyze changes in prices over time and identify events, cycles, or seasons that influence these changes. 
-    Additionally, we have explored the market volumes of commodities, laying the groundwork for more dynamic and interactive data exploration. 
-    Our next step is to enhance user interactivity with the data, allowing for more in-depth analysis and exploration of our datasets. This will enable us to fully leverage the rich content of our data and improve our analyses.
-    """
-)
-
 footer = html.Div(
     dcc.Markdown(
         """
@@ -268,37 +254,39 @@ Visual_Report_card = dbc.Card(
     ],
     className="mt-4",
 )
-
-Summary_card = dbc.Card(
+geo_card = dbc.Card(
     [
-        dbc.CardHeader("Report Summary"),
-        dbc.CardBody(Summary_text),
+        dbc.CardHeader("GeoVisual"),
+        html.Iframe(width="100%", height="600", srcDoc=mymap._repr_html_()),
     ],
     className="mt-4",
 )
-
 timeseries_card = dbc.Card(
     [
         dbc.CardHeader("Analysis"),
         dbc.CardBody(Timeseries_text),
-        dcc.Graph(id="fig14", figure=fig14, className="mb-2"),
+        # dcc.Graph(id="fig14", figure=fig14, className="mb-2"),
         dbc.CardBody(analysis_text),
         dcc.Graph(id="fig15", figure=fig15, className="mb-2"),
+        dbc.CardBody(analysis_text),
     ],
     className="mt-4",
 )
 
 tabs = dbc.Tabs(
     [
-        dbc.Tab(Introduction_card, tab_id="tab-1", label="Introduction"),
-        dbc.Tab(Visual_Report_card, tab_id="tab-1", label="Visual Analysis"),
+        dbc.Tab(Introduction_card, tab_id="tab-1", label="Overview"),
+        dbc.Tab(geo_card, tab_id="tab-2", label="GeoData"),
+        dbc.Tab(Visual_Report_card, tab_id="tab-3", label="Visual Analysis"),
         dbc.Tab(
-            [timeseries_card, forecast_text],
-            tab_id="tab-3",
+            [timeseries_card,
+             dcc.Graph(id="fig", figure=fig, className="mb-2"),
+             dbc.CardBody(analysis2_text),
+             ],
+            tab_id="tab-4",
             label="Timeseries Analysis",
             className="pb-4",
         ),
-        dbc.Tab(Summary_card, tab_id="tab-3", label="Summary"),
     ],
     id="tabs",
     active_tab="tab-2",
@@ -306,29 +294,53 @@ tabs = dbc.Tabs(
 )
 
 navbar = dbc.NavbarSimple(
-brand='Attain Solutions Ltd',
-brand_style={'fontSize': 40, 'color': 'white'},
-children=html.A('Data Source',
-href='https://data.humdata.org/dataset/wfp-food-prices-for-kenya?force_layout=desktop',
-target='_blank',
-style={'textAlign':'center','color': 'black'}),
-color='primary',
-fluid=True,
-sticky='top'
+    brand='Attain Solutions Ltd',
+    brand_style={'fontSize': 40, 'color': 'white'},
+    children=html.A('Data Source',
+                    href='https://data.humdata.org/dataset/wfp-food-prices-for-kenya?force_layout=desktop',
+                    target='_blank',
+                    style={'textAlign': 'center', 'color': 'black'}),
+    color='primary',
+    fluid=True,
+    sticky='top'
 )
 
-dropdown = dcc.Dropdown(
-    id="dropdown",
-    multi=True,
-    options=[
-        {"label": x, "value": x}
-        for x in sorted(df["market"].unique())
-    ],
-    value="market",
+# selecting unique value in markets
+marketdropdown = dcc.Dropdown(
+    id='market-dropdown',
+    options=[{'label': val, 'value': val} for val in df['market'].unique()],
+    value=df['market'].unique()[0],
+    style={'width': '50%', 'margin-bottom': '20px','color': 'black'},
+    multi=False,
 )
-"""
-===========================================================================
+# selecting unique value in commodities
+commoditydropdown = dcc.Dropdown(
+    id='commodity-dropdown',
+    options=[{'label': val, 'value': val} for val in df['commodity'].unique()],
+    value=df['commodity'].unique()[0],
+    style={'width': '50%', 'margin-bottom': '20px', 'color': 'black'},
+    multi=False,
+)
+averagepricecard = dbc.Card(
+    [
+        dbc.CardHeader("Price Statistics"),
+        dbc.CardBody([
+            html.H4("Market Statistics", className="card-title"),
+            commoditydropdown,
+            marketdropdown,
+            html.P(id="average-price", className="card-text")
+        ]),
+
+    ],
+    color="primary",
+    inverse=True,
+    style={'margin-bottom': '20px'},
+    className="mt-4",
+)
+
+"""=====================================================
 Main Layout
+======================
 """
 
 app.layout = dbc.Container(
@@ -337,22 +349,35 @@ app.layout = dbc.Container(
         dbc.Row(
             dbc.Col(
                 html.H2(
-                    "Kenya Food Market Report",
+                    "Kenya Food Market Report App by Attain",
                     className="text-center bg-primary text-white p-2",
                 ),
             )
         ),
-        dbc.Row(dbc.Col(dropdown)),
         dbc.Row(
             [
-                dbc.Col(tabs, width=12, lg=5, className="mt-4 border"),
                 dbc.Col(
                     [
-                     dcc.Graph(id="fig3", figure=fig3, className="mb-2"),
-                     dbc.CardBody(Timeseries2_text),
-                     html.Iframe( width ="100%", height="600", srcDoc=mymap._repr_html_()),
-                     dcc.Graph(id="fig", figure=fig, className="mb-2"),
-                     dbc.CardBody(analysis2_text),
+                        dbc.CardBody(averagepricecard),
+                    ],
+                    width=4,
+                ),
+                dbc.Col(
+                    [
+                        dbc.CardHeader("Market Chart"),
+                        # dcc.Graph(id="fig14", figure=fig14, className="mb-2"),
+                        dcc.Graph(id='area-chart')
+                    ],
+                    width=8,
+                ),
+            ]),
+        dbc.Row(
+            [
+                dbc.Col(tabs, width=8, lg=5, className="mt-4 border"),
+                dbc.Col(
+                    [
+                        html.Div([dcc.Markdown('Latest Prices'), dash_table]),
+                        dcc.Graph(id="fig3", figure=fig3, className="mb-2"),
                     ],
                     width=12,
                     lg=7,
@@ -366,30 +391,47 @@ app.layout = dbc.Container(
 )
 
 # Callbacks ***************************************************************
-@app.callback(
-    Output(component_id="fig1", component_property="figure"),
-    [Input(component_id="dropdown", component_property="value")],
-)
-def update_graph(chosen_value):
-    print(f"Values chosen by user: {chosen_value}")
 
-    if len(chosen_value) == 0:
-        return {}
-    else:
-        df_filtered = df[df["market"].isin(chosen_value)]
-        fig = px.line(
-            data_frame=df_filtered,
-            x="date",
-            y="price",
-            color="market",
-            log_y=True,
-            labels={
-                "price": "price",
-                "dates": "dates",
-                "market": "market",
-            },
-        )
-        return fig
+# callback function to update price statistics
+@app.callback(
+    Output('average-price', 'children'),
+    [Input('market-dropdown', 'value'), Input('commodity-dropdown', 'value')]
+)
+def update_average_price(selected_market, selected_commodity):
+    filtered_df = df[(df['market'] == selected_market) & (df['commodity'] == selected_commodity)]
+
+    # maximum, minimum and average values
+    maximum_price = filtered_df['price'].max()
+    minimum_price = filtered_df.loc[filtered_df['price'] > 0, 'price'].min()
+    average_price = filtered_df['price'].mean()
+    return f"Average price for {selected_commodity} in {selected_market} is KES {average_price:.2f}." \
+           f"Best price for {selected_commodity} in {selected_market} is KES {maximum_price:.2f}." \
+           f"Lowest registered price for {selected_commodity} in {selected_market} is KES {minimum_price:.2f}"
+
+
+@app.callback(
+
+    Output('area-chart', 'figure'),
+    [Input('market-dropdown', 'value'), Input('commodity-dropdown', 'value')]
+)
+def update_area_chart(selectedmarket, selectedcommodity):
+    filtereddf = datax[(datax['market'] == selectedmarket) & (datax['commodity'] == selectedcommodity)]
+    filtereddf['date'] = pd.to_datetime(filtereddf['date'])
+    # area chart
+    fig = px.area(filtereddf, x="date", y="price", color="market", hover_name="market",
+                  title=f'Price Trend for {selectedcommodity} in {selectedmarket}')
+    return fig
+
+
+def update_piechart():
+    pass
+
+
+def update_donutchart():
+    pass
+
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=False)
+
+
