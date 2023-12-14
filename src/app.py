@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import folium as folium
 from dash import Dash, dcc, html, dash_table, Input, Output, State, callback_context
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
@@ -14,7 +15,44 @@ from datetime import date,timedelta
 import os
 import seaborn as sns
 from plotly.subplots import make_subplots
+import folium
+from folium import plugins
 
+# Source our data using the actual link to your CSV file
+csv_link = 'https://raw.githubusercontent.com/Donald-Mutai/Files/main/wfp_food_prices_ken.csv'
+
+# Read the CSV file into a Pandas DataFrame
+df = pd.read_csv(csv_link)
+data = pd.read_csv(csv_link)
+
+# csv data to dataframe
+df = pd.DataFrame(df)
+#data = pd.DataFrame(df)
+
+#adjust for invalid and missing values
+df = df.dropna()
+df.isnull().sum()
+
+#eliminate the second row to standardize dataframe format
+df = df.drop(0)
+
+"""
+==========================================================================
+Map Visual
+"""
+
+mymap = folium.Map([-1.287905,36.792712], id="folium-map",  zoom_start =50, width ="%100", height="%100")
+locations = list(zip(df.latitude,df.longitude))
+
+# Create a MarkerCluster object
+marker_cluster = plugins.MarkerCluster(popups = df['market'].tolist()).add_to(mymap)
+
+# Add individual markers to the MarkerCluster using a loop
+for location in locations:
+    folium.Marker(location, popup=f'Marker at {location}').add_to(marker_cluster)
+
+# Save the map
+mymap.save('map_with_marker_cluster.html')
 
 stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 
@@ -312,6 +350,7 @@ app.layout = dbc.Container(
                     [
                      dcc.Graph(id="fig3", figure=fig3, className="mb-2"),
                      dbc.CardBody(Timeseries2_text),
+                     html.Iframe( width ="100%", height="600", srcDoc=mymap._repr_html_()),
                      dcc.Graph(id="fig", figure=fig, className="mb-2"),
                      dbc.CardBody(analysis2_text),
                     ],
