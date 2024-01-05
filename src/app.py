@@ -4,7 +4,7 @@ import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import pandas as pd
 import plotly.express as px
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 import folium
 from folium import plugins
 import openpyxl
@@ -84,9 +84,15 @@ df_result3.columns = ['market', 'Total']
 df_result4.columns = ['commodity', 'Total']
 
 
-selected= ['date','commodity','category','market','unit','pricetype','price']
+selected = ['date', 'commodity', 'category', 'market', 'unit', 'pricetype', 'price']
 selected_df = data[selected]
-dash_table = dash_table.DataTable(df.to_dict('records'),[{"name": i,"id":i} for i in selected_df.tail(15).columns], page_size= 15)
+selected_df['date'] = pd.to_datetime(selected_df['date']).dt.strftime('%Y-%m-%d')
+dash_table = dash_table.DataTable(
+    selected_df.tail(15).to_dict('records'),
+    [{"name": i, "id": i} for i in selected_df.columns],
+    page_size=15
+)
+
 
 # Pie Chart
 
