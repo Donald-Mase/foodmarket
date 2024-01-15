@@ -69,13 +69,21 @@ def scrape_and_save_data(url, output_csv):
                 for row in data:
                     print(row)
 
-                # Save data to a CSV file
-                with open(output_csv, 'w', newline='') as csvfile:
-                    csv_writer = csv.writer(csvfile)
-                    csv_writer.writerow(['Commodity', 'Classification', 'Grade', 'Sex', 'Market', 'Wholesale', 'Retail', 'Supply Volume', 'County', 'Date'])
-                    csv_writer.writerows(data)
+               # Save data to a CSV file without duplicates
+                with open(output_csv, 'r', newline='') as existing_file:
+                    existing_data = set(tuple(row) for row in csv.reader(existing_file))
 
-                print(f"Data saved to {output_csv}")
+                unique_data = [row for row in data if tuple(row) not in existing_data]
+
+                if unique_data:
+                    with open(output_csv, 'a', newline='') as csvfile:
+                        csv_writer = csv.writer(csvfile)
+                        csv_writer.writerows(unique_data)
+
+                    print(f"Unique data saved to {output_csv}")
+                else:
+                    print("No new unique data found.")
+
             else:
                 print("Table not found on the page.")
         else:
